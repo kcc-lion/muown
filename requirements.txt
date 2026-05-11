@@ -1,0 +1,17 @@
+# absl-py>=2.1.0
+# datasets>=3.5.0
+# PyYAML>=6.0.2
+# torch>=2.6.0
+# transformers>=4.44.2
+# wandb>=0.17.9
+# zstandard>=0.23.0
+absl-py
+datasets
+evaluate
+datargs
+PyYAML
+transformers
+wandb
+zstandard
+hydra-core
+tqdm

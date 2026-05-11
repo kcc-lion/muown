@@ -1,0 +1,92 @@
+##
+## ~2.7B Transformer++ config — multi-node (4x GH200, 16 GPUs)
+## d_model=2560, n_layers=32, n_heads=40 (head_dim=64) -> ~2.67B params with GLU MLP + tied embeddings
+## Architecture dims follow Pythia-2.8B (d=2560, L=32); head_dim=64 for consistency
+## Global batch size: micro_bs=4 * grad_accum=4 * world_size=16 = 256 samples = 524K tokens/step
+##
+
+deterministic: False
+seed: 0
+
+log_weight_norms: False
+log_attn_logits: False
+
+trainset_path: "path/to/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
+vocab_size: 50280
+seq_len: 2048
+sampler: 'stateful_random'
+sampler_seed: 0
+num_workers: 4
+
+eval: True
+validset_path: "path/to/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
+valid_tokens: 10000000
+eval_every_steps: 500
+eval_when_finished: True
+
+# ~2.7B model configuration (Pythia-2.8B dims)
+model: 'transformer'
+d_model: 2560
+mlp_class: 'glu'
+expand: '8/3'
+n_layers: 32
+n_heads: 40
+rms_norm: True
+tie_embeddings: True
+torch_compile: True
+
+allow_tf32: True
+
+# Token budget: ~53.3B tokens (20x params)
+# steps_budget = 53.3B / (seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
+# With 16 GPUs (4 nodes): 53.3B / (2048 * 4 * 4 * 16) = 101716 steps
+# Effective batch size: 4 * 4 * 16 = 256 samples = 524K tokens/step
+steps_budget: 101716
+
+micro_batch_size: 4
+grad_accumulation_steps: 4
+
+dtype: 'bfloat16'
+
+# Optimizer settings (will be overridden per experiment)
+optim: 'muon_torch'
+lr: 0.001
+adamw_weight_decay: 0.0
+grad_clip: 1.0
+adjust_lr: 'match_adam'
+muon_weight_decay: 0.0
+muon_beta: 0.95
+muon_nesterov: True
+muon_ns_steps: 5
+muown_backend: 'newtonschulz5_torch'
+adamw_beta1: 0.9
+adamw_beta2: 0.95
+
+scheduler: 'wsd'
+warmup_steps: 0.02
+cooldown_steps: 0.2
+lr_start: 0.0
+lr_end: 0.0
+lr_end_pct: null
+
+log_every_steps: 10
+print_progress: False
+
+use_wandb: True
+wandb_project: '3B_multinode'
+wandb_dir: '~/repos/muown/wandb'
+wandb_run_name: 'base'
+
+exp_name: 'base'
+out_dir: 'path/to/3B_multinode/checkpoints'
+over_write: True
+
+resume: False
+resume_step: null
+resume_exp_name: null
+wandb_run_id: null
+
+save_last_checkpoint: True
+save_intermediate_checkpoints: True
+save_every_steps: 2000
+max_checkpoints: 1

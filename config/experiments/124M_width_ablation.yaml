@@ -1,0 +1,87 @@
+##
+## ~124M model width ablation config
+## d_model=768, n_layers=12, n_heads=12 (head_dim=64) -> ~124M params with GLU MLP + tied embeddings
+##
+
+deterministic: False
+seed: 1996
+
+trainset_path: "path/to/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
+vocab_size: 50280 # tokenizer len: 50277, round up to shard
+seq_len: 2048
+sampler: 'stateful_random'
+sampler_seed: 1996
+num_workers: 4
+
+eval: True
+validset_path: "path/to/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
+valid_tokens: 10000000  # ~10M tokens for validation
+eval_every_steps: 250
+eval_when_finished: True
+
+# ~124M model configuration
+model: 'transformer'
+d_model: 768
+mlp_class: 'glu'
+expand: '8/3'
+n_layers: 12
+n_heads: 12
+rms_norm: True
+tie_embeddings: True
+torch_compile: True
+
+# Allow TF32 matmul for speedups on Ampere+ GPUs
+allow_tf32: True
+
+# Token budget: 2.48B tokens (Chinchilla optimal: 20x 124M params)
+# steps_budget = token_budget / (seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
+# With 4 GPUs: 2.48B / (2048 * 16 * 4 * 4) = 4730 steps
+# Effective batch size: 16 * 4 * 4 = 256 samples = 524K tokens/step
+steps_budget: 4730
+
+micro_batch_size: 16
+grad_accumulation_steps: 4
+
+dtype: 'bfloat16'
+
+# Optimizer settings (will be overridden per experiment)
+optim: 'muon_torch'
+lr: 0.001
+adamw_weight_decay: 0.0
+grad_clip: 1.0
+adjust_lr: 'match_adam'
+muon_weight_decay: 0.0
+muon_beta: 0.95
+muon_nesterov: True
+muon_ns_steps: 5
+adamw_beta1: 0.9
+adamw_beta2: 0.95
+muown_magnitude_optim: 'adam'
+
+scheduler: 'wsd'
+warmup_steps: 0.02 # 2%
+cooldown_steps: 0.2 # 20%
+lr_start: 0.0
+lr_end: 0.0
+lr_end_pct: null
+
+log_every_steps: 10
+print_progress: False
+
+use_wandb: True
+wandb_project: '124M_width_ablation'
+wandb_dir: '~/repos/muown/wandb'
+wandb_run_name: 'base'
+
+exp_name: 'base'
+out_dir: 'path/to/124M_width_ablation/checkpoints'
+over_write: True
+
+resume: False
+resume_step: null
+resume_exp_name: null
+
+save_last_checkpoint: True
+save_intermediate_checkpoints: False
+save_every_steps: null
+max_checkpoints: 1

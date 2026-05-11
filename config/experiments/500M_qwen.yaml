@@ -1,0 +1,90 @@
+##
+## Qwen2-0.5B optimizer benchmark config.
+##
+
+
+deterministic: False
+seed: 1996
+
+trainset_path: "path/to/fwedu/fwedu_sample_10B_tokenizer_Qwen2/tokenized_Qwen_Qwen2-0.5B/ctx_2048/train"
+vocab_size: 151936 # Qwen2Config default; matches the dataset tokenization. Used for logging only.
+seq_len: 2048 # matches the ctx_2048 chunks on disk; no slicing overhead
+sampler: 'stateful_random'
+sampler_seed: 1996
+num_workers: 4
+
+eval: True
+validset_path: "path/to/fwedu/fwedu_sample_10B_tokenizer_Qwen2/tokenized_Qwen_Qwen2-0.5B/ctx_2048/valid"
+valid_tokens: 10000000  # 10M tokens for validation (~full valid set at ctx_2048)
+eval_every_steps: 250
+eval_when_finished: True
+
+model: 'Qwen2-0.5B'
+
+# RoPE base frequency override applied in models/construct.py (qwen branch).
+# HF default for Qwen2 is 1_000_000, but that value was only adopted in the
+# 32K long-context phase (Qwen2 report, sec. 3.2); the bulk of pre-training
+# used 10_000, which also matches the Llama / Transformer++ baseline at our
+# seq_len=2048. Set to null to keep the upstream value.
+rope_theta: 10000
+
+
+torch_compile: False
+
+# Allow TF32 matmul for speedups on Ampere+ GPUs
+allow_tf32: True
+
+# Token budget: 9.5B tokens out of the 10B-token (minus 10M valid) FineWeb-Edu
+# sample-10BT corpus tokenized with the Qwen2 tokenizer.
+# Hardware: 4 nodes x 4 GH200 = 16 GPUs, 95 GB HBM per device.
+# steps_budget = token_budget / (seq_len * micro_batch_size * grad_accumulation_steps * world_size)
+# With 16 GPUs: 9.5B / (2048 * 4 * 4 * 16) ≈ 18119 steps (~9.4998B tokens).
+# Effective batch size: 4 * 4 * 16 = 256 samples = 524K tokens/step
+steps_budget: 18119
+
+
+micro_batch_size: 4
+grad_accumulation_steps: 4
+
+dtype: 'bfloat16'
+
+# Optimizer settings (override per experiment)
+optim: 'muown'
+lr: 0.001
+adamw_weight_decay: 0.0
+grad_clip: 1.0
+adjust_lr: 'match_adam'
+muon_weight_decay: 0.0
+muon_beta: 0.95
+muon_nesterov: True
+muon_ns_steps: 5
+adamw_beta1: 0.9
+adamw_beta2: 0.95
+
+scheduler: 'wsd'
+warmup_steps: 0.02 # 2%
+cooldown_steps: 0.2 # 20%
+lr_start: 0.0
+lr_end: 0.0
+lr_end_pct: null
+
+log_every_steps: 10
+print_progress: False
+
+use_wandb: True
+wandb_project: 'qwen'
+wandb_dir: '~/repos/muown/wandb'
+wandb_run_name: 'base'
+
+exp_name: 'qwen2_0_5B_base'
+out_dir: 'path/to/qwen/checkpoints'
+over_write: True
+
+resume: False
+resume_step: null
+resume_exp_name: null
+
+save_last_checkpoint: True
+save_intermediate_checkpoints: True
+save_every_steps: 1000
+max_checkpoints: 1

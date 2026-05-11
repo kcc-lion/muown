@@ -1,0 +1,90 @@
+##
+## ~500M Transformer++ config with weight norm and attention logit logging
+## d_model=1280, n_layers=22, n_heads=20 (head_dim=64) -> ~511M params with GLU MLP + tied embeddings
+##
+
+deterministic: False
+seed: 1996
+
+log_weight_norms: True
+log_attn_logits: True
+
+trainset_path: "${SCRATCH}/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
+vocab_size: 50280 # tokenizer len: 50277, round up to shard
+seq_len: 2048
+sampler: 'stateful_random'
+sampler_seed: 1996
+num_workers: 4
+
+eval: True
+validset_path: "${SCRATCH}/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
+valid_tokens: 10000000  # ~10M tokens for validation
+eval_every_steps: 250
+eval_when_finished: True
+
+# ~500M model configuration
+model: 'transformer'
+d_model: 1280
+mlp_class: 'glu'
+expand: '8/3'
+n_layers: 22
+n_heads: 20
+rms_norm: True
+tie_embeddings: True
+torch_compile: True
+
+# Allow TF32 matmul for speedups on Ampere+ GPUs
+allow_tf32: True
+
+# Token budget: 10B tokens
+# steps_budget = token_budget / (seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
+# With 4 GPUs: 10B / (2048 * 16 * 4 * 4) = 19073 steps
+# Effective batch size: 16 * 4 * 4 = 256 samples = 524K tokens/step
+steps_budget: 19073
+
+micro_batch_size: 16
+grad_accumulation_steps: 4
+
+dtype: 'bfloat16'
+
+# Optimizer settings (will be overridden per experiment)
+optim: 'muon_torch'
+lr: 0.001
+adamw_weight_decay: 0.0
+grad_clip: 1.0
+adjust_lr: 'match_adam'
+muon_weight_decay: 0.0
+muon_beta: 0.95
+muon_nesterov: True
+muon_ns_steps: 5
+adamw_beta1: 0.9
+adamw_beta2: 0.95
+muown_exp_fixed_magnitude: False
+muown_exp_column_norm: True
+
+scheduler: 'wsd'
+warmup_steps: 0.02 # 2%
+cooldown_steps: 0.2 # 20%
+lr_start: 0.0
+lr_end: 0.0
+lr_end_pct: null
+
+log_every_steps: 10
+print_progress: False
+
+use_wandb: True
+wandb_project: '500M_log_weight_norms'
+wandb_dir: '~/repos/muown/wandb'
+wandb_run_name: 'base'
+
+exp_name: 'base'
+out_dir: '${SCRATCH}/500M_log_weight_norms/checkpoints'
+over_write: True
+
+resume: False
+resume_step: null
+resume_exp_name: null
+
+save_last_checkpoint: True
+save_intermediate_checkpoints: False
+save_every_steps: 1000

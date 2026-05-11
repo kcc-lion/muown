@@ -1,0 +1,85 @@
+##
+## ~160M model optimizer sweep config
+## d_model=768, n_layers=12, n_heads=12 -> ~125M params with GLU MLP (commonly referred to as "160M" class)
+##
+
+deterministic: False
+seed: 1996
+
+trainset_path: "path/to/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
+vocab_size: 50280 # tokenizer len: 50277, round up to shard
+seq_len: 1024
+sampler: 'stateful_random'
+sampler_seed: 1996
+num_workers: 4
+
+eval: True
+validset_path: "path/to/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
+valid_tokens: 4000000  # ~4M tokens for validation
+eval_every_steps: 250
+eval_when_finished: True
+
+# ~160M model configuration
+model: 'transformer'
+d_model: 768
+mlp_class: 'glu'
+expand: '8/3'
+n_layers: 12
+n_heads: 12
+rms_norm: True
+tie_embeddings: True
+torch_compile: True
+
+# Allow TF32 matmul for speedups on Ampere+ GPUs
+allow_tf32: True
+
+# Token budget: 5B tokens (smaller budget for ablation studies)
+# steps_budget = token_budget / (seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
+# With 4 GPUs: 5B / (1024 * 32 * 4 * 4) = 9537 steps
+# Effective batch size: 32 * 4 * 4 = 512 samples = 524K tokens/step
+steps_budget: 9537
+
+micro_batch_size: 32
+grad_accumulation_steps: 4
+
+dtype: 'bfloat16'
+
+# Optimizer settings (will be overridden per experiment)
+optim: 'muon_vanilla'
+lr: 0.001
+adamw_weight_decay: 0.0
+grad_clip: 1.0
+adjust_lr: 'match_adam'
+muon_weight_decay: 0.0
+muon_beta: 0.95
+muon_nesterov: True
+muon_ns_steps: 5
+adamw_beta1: 0.9
+adamw_beta2: 0.95
+
+scheduler: 'wsd'
+warmup_steps: 0.02 # 2%
+cooldown_steps: 0.2 # 20%
+lr_start: 0.0
+lr_end: 0.0
+lr_end_pct: null
+
+log_every_steps: 10
+print_progress: False
+
+use_wandb: True
+wandb_project: '160M_optimizer_sweep'
+wandb_dir: '~/repos/muown/wandb'
+wandb_run_name: 'base'
+
+exp_name: 'base'
+out_dir: 'path/to/160M_optimizer_sweep/checkpoints'
+over_write: True
+
+resume: False
+resume_step: null
+resume_exp_name: null
+
+save_last_checkpoint: True
+save_intermediate_checkpoints: False
+save_every_steps: 1000
