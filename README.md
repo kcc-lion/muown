@@ -1,7 +1,7 @@
 # Muown Optimizer
 
 This repository contains the training code accompanying the paper on
-**Muown**, a Muon-style optimizer that learns implicit per-parameter magnitudes.
+**Muown** (https://arxiv.org/abs/2605.10797), a Muon-style optimizer that learns implicit per-parameter magnitudes.
 It supports pretraining decoder-only Transformers on language modeling and
 includes a small library of optimizer baselines (`adamw`, `muon_torch`,
 `muon_bench`, `muown`, `muown_dp`, `normuon`, `lion`, `soap`).
